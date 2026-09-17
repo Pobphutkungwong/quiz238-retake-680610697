@@ -7,19 +7,41 @@ dotenv.config();
 import type { User, CustomRequest } from "../libs/types.js";
 
 // import authentication middleware
-import { authenticateToken } from "../middlewares/authenMiddleware.ts";
+import { authenticateToken } from "../middlewares/authenMiddleware.js";
 
 // import database
-import { users } from "../db/db.ts";
+import { users } from "../db/db.js";
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
 // POST /api/vXXX/auth/login
 router.post("/login", (req: Request, res: Response) => {
   try { 
+    const username = req.body.username;
+    const password = req.body.password;
+
+    const user = users.find(function (u: User) {
+      return u.username === username && u.password === password;
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Username or Password is incorrect",
+      });
+    }
+
+    const token = jwt.sign(
+      { username: user.username, userId: user.userId },
+      JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
+      token: token,
     });
   } catch (err) {
     return res.status(500).json({
